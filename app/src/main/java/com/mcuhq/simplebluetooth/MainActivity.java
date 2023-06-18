@@ -91,7 +91,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener{
     private Timer timer;
 
     private Nmea_manager nmea_manager;
-    
+    private Logger logger;
 
     @SuppressLint("MissingInflatedId")
     @Override
@@ -101,14 +101,15 @@ public class MainActivity extends AppCompatActivity implements LocationListener{
         // Initialize the UI parameters
         this.init_UI();
 
-
+        // init logger
+        this.logger = new Logger(getExternalFilesDir("Logs"));
 
         // Ask for location permission if not already allowed
         if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, 1);
 
         // Initializing Nmea Manager
-        nmea_manager = new Nmea_manager(this.mReadBuffer);
+        nmea_manager = new Nmea_manager(this.mReadBuffer, logger);
 
         // Create LocationManager instance
         locationManager = (LocationManager) this.getApplicationContext().getSystemService(Context.LOCATION_SERVICE);
@@ -357,7 +358,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener{
                         mConnectedThread = new ConnectedThread(mBTSocket, mHandler);
                         mConnectedThread.start();
                         // HERE!!
-                        timer.schedule(task, 0, 1000);
+                        timer.schedule(task, 0, 200);
 //                        Toast.makeText(MainActivity.this, "Started NMEA Streaming!", Toast.LENGTH_SHORT).show();
 
                         mHandler.obtainMessage(CONNECTING_STATUS, 1, -1, name)
