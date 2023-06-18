@@ -91,6 +91,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener{
     private Timer timer;
 
     private Nmea_manager nmea_manager;
+    
 
     @SuppressLint("MissingInflatedId")
     @Override
@@ -99,6 +100,8 @@ public class MainActivity extends AppCompatActivity implements LocationListener{
         setContentView(R.layout.activity_main);
         // Initialize the UI parameters
         this.init_UI();
+
+
 
         // Ask for location permission if not already allowed
         if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
@@ -120,7 +123,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener{
         // Get the best provider based on the criteria
         String bestProvider = locationManager.getBestProvider(criteria, true);
         locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 100L, (float) 0, this);
-        
+
         mHandler = new Handler(Looper.getMainLooper()){
             @Override
             public void handleMessage(Message msg){
