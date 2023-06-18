@@ -51,7 +51,7 @@ import java.util.TimerTask;
 import java.util.UUID;
 
 @TargetApi(Build.VERSION_CODES.N)
-public class MainActivity extends AppCompatActivity implements OnNmeaMessageListener, LocationListener{
+public class MainActivity extends AppCompatActivity implements LocationListener{
 
     private final String TAG = MainActivity.class.getSimpleName();
 
@@ -84,45 +84,33 @@ public class MainActivity extends AppCompatActivity implements OnNmeaMessageList
     private String nmea_message;
     private String last_rmc, last_gga;
     private double longitude, latitude;
-    private String original_rmc = "$GNRMC,081912.00,A,3206.168103,N,03512.583148,E,0.0,,150623,3.0,E,A,V*70";
-    private String original_gga = "$GNGGA,081912.00,3206.168103,N,03512.583148,E,1,12,0.5,677.8,M,19.0,M,,*7D\n";
     private Handler mHandler; // Our main handler that will receive callback notifications
     private ConnectedThread mConnectedThread; // bluetooth background worker thread to send and receive data
     private BluetoothSocket mBTSocket = null; // bi-directional client-to-client data path
     private TimerTask task;
     private Timer timer;
 
+    private Nmea_manager nmea_manager;
+
     @SuppressLint("MissingInflatedId")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        mBluetoothStatus = (TextView)findViewById(R.id.bluetooth_status);
-        mReadBuffer = (TextView) findViewById(R.id.read_buffer);
-        mScanBtn = (Button)findViewById(R.id.scan);
-        mOffBtn = (Button)findViewById(R.id.off);
-        mDiscoverBtn = (Button)findViewById(R.id.discover);
-        mListPairedDevicesBtn = (Button)findViewById(R.id.paired_btn);
-        mLED1 = (CheckBox)findViewById(R.id.checkbox_led_1);
-        mMotor1 = (CheckBox)findViewById(R.id.checkbox_motor);
-
-        mBTArrayAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1);
-        mBTAdapter = BluetoothAdapter.getDefaultAdapter(); // get a handle on the bluetooth radio
-
-        mDevicesListView = (ListView)findViewById(R.id.devices_list_view);
-        mDevicesListView.setAdapter(mBTArrayAdapter); // assign model to view
-        mDevicesListView.setOnItemClickListener(mDeviceClickListener);
+        // Initialize the UI parameters
+        this.init_UI();
 
         // Ask for location permission if not already allowed
         if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, 1);
 
+        // Initializing Nmea Manager
+        nmea_manager = new Nmea_manager(this.mReadBuffer);
 
         // Create LocationManager instance
         locationManager = (LocationManager) this.getApplicationContext().getSystemService(Context.LOCATION_SERVICE);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            locationManager.addNmeaListener(this);
+            locationManager.addNmeaListener(this.nmea_manager);
         }
         // Specify the provider priority using criteria
         Criteria criteria = new Criteria();
@@ -132,16 +120,14 @@ public class MainActivity extends AppCompatActivity implements OnNmeaMessageList
         // Get the best provider based on the criteria
         String bestProvider = locationManager.getBestProvider(criteria, true);
         locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 100L, (float) 0, this);
-
-
-
+        
         mHandler = new Handler(Looper.getMainLooper()){
             @Override
             public void handleMessage(Message msg){
                 if(msg.what == MESSAGE_READ){
                     String readMessage = null;
                     readMessage = new String((byte[]) msg.obj, StandardCharsets.UTF_8);
-//                    mReadBuffer.setText(last_rmc+last_gga);
+//                    mReadBuffer.setText(nmea_manager.getLast_rmc()+nmea_manager.getLast_gga());
                 }
 
                 if(msg.what == CONNECTING_STATUS){
@@ -160,24 +146,14 @@ public class MainActivity extends AppCompatActivity implements OnNmeaMessageList
             Toast.makeText(getApplicationContext(),"no bluetooth connection",Toast.LENGTH_SHORT).show();
         }
         else {
-
-//            mLED1.setOnClickListener(new View.OnClickListener() {
-//                @Override
-//                public void onClick(View v) {
-//                    if (mConnectedThread != null) { //First check to make sure thread created
-//                        mConnectedThread.write("1");
-//                    }
-//                }
-//            });
-
             mLED1.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
                 @Override
                 public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                     if (mConnectedThread != null) {
                         if (isChecked) {
-                            mConnectedThread.write("1"); //LED 토글 클릭시 쓰레드에 1 입력
+                            mConnectedThread.write("1"); //LED
                         }else {
-                            mConnectedThread.write("3"); //LED 토글 해제시 쓰레드에 3 입력
+                            mConnectedThread.write("3"); //LED
                             }
                         }
                     }
@@ -187,14 +163,7 @@ public class MainActivity extends AppCompatActivity implements OnNmeaMessageList
             mMotor1.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
                 @Override
                 public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                    if (mConnectedThread != null) {
-//                        if (isChecked) {
-////                            mConnectedThread.write("2"); //Motor 토글 클릭시 쓰레드에 2 입력
-//
-//                        } else {
-//                            mConnectedThread.write("4"); //Motor 토글 해제시 쓰레드에 4 입력
-//                        }
-                    }
+                    if (mConnectedThread != null) {}
                 }
             });
 
@@ -227,18 +196,33 @@ public class MainActivity extends AppCompatActivity implements OnNmeaMessageList
                 }
             });
         }
-
+        // Setting up the Nmea updater
         task = new TimerTask() {
             @Override
             public void run() {
-                mConnectedThread.write(last_rmc+last_gga);
+                mConnectedThread.write(nmea_manager.getLast_rmc()+nmea_manager.getLast_gga());
             }
         };
         timer = new Timer();
 
+    }
 
+    private void init_UI(){
+        mBluetoothStatus = (TextView)findViewById(R.id.bluetooth_status);
+        mReadBuffer = (TextView) findViewById(R.id.read_buffer);
+        mScanBtn = (Button)findViewById(R.id.scan);
+        mOffBtn = (Button)findViewById(R.id.off);
+        mDiscoverBtn = (Button)findViewById(R.id.discover);
+        mListPairedDevicesBtn = (Button)findViewById(R.id.paired_btn);
+        mLED1 = (CheckBox)findViewById(R.id.checkbox_led_1);
+        mMotor1 = (CheckBox)findViewById(R.id.checkbox_motor);
 
+        mBTArrayAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1);
+        mBTAdapter = BluetoothAdapter.getDefaultAdapter(); // get a handle on the bluetooth radio
 
+        mDevicesListView = (ListView)findViewById(R.id.devices_list_view);
+        mDevicesListView.setAdapter(mBTArrayAdapter); // assign model to view
+        mDevicesListView.setOnItemClickListener(mDeviceClickListener);
     }
 
     private void bluetoothOn(){
@@ -389,78 +373,6 @@ public class MainActivity extends AppCompatActivity implements OnNmeaMessageList
             Log.e(TAG, "Could not create Insecure RFComm Connection",e);
         }
         return  device.createRfcommSocketToServiceRecord(BT_MODULE_UUID);
-    }
-
-    @Override
-    public void onNmeaMessage(String s, long l) {
-//        if (mConnectedThread != null){
-//            mConnectedThread.write(s);
-////            SystemClock.sleep(900);
-//        }
-        Log.d("NMEA", s);
-        if(s.contains("$GPGGA") | s.contains("$GNGGA")){
-
-            String[] fields = s.split(",");
-            fields[7] = "12";
-            fields[0] = "$GNGGA";
-            String new_s = "";
-
-
-            for (int i = 0; i < fields.length; i++){
-                new_s += fields[i];
-                if (i < fields.length - 1)
-                    new_s += ",";
-            }
-
-            String check_sum = checksum(new_s.substring(1, new_s.indexOf("*")));
-            String[] new_fields = new_s.split(",,");
-            new_fields[1] = "*" + check_sum;
-            new_s = "";
-
-            for (int i = 0; i < new_fields.length; i++){
-                new_s += new_fields[i];
-                if (i < new_fields.length - 1)
-                    new_s += ",,";
-            }
-
-            new_s += "\n";
-
-            this.last_gga = new_s;
-            mReadBuffer.setText(last_rmc+last_gga);
-            Log.d("NMEA", new_s);
-        }
-
-        else if (s.contains("$GPRMC") | s.contains("$GNRMC")) {
-            String[] fields = s.split(",");
-            fields[0] = "$GNRMC";
-            fields[fields.length -1] = "W*";
-            String new_s = "";
-
-
-            for (int i = 0; i < fields.length; i++){
-                new_s += fields[i];
-                if (i < fields.length - 1)
-                    new_s += ",";
-            }
-
-            String check_sum = checksum(new_s.substring(1, new_s.indexOf("*")));
-            new_s += check_sum;
-            new_s += " \n";
-
-
-            this.last_rmc = new_s;
-            mReadBuffer.setText(last_rmc+last_gga);
-            Log.d("NMEA", new_s);
-        }
-    }
-
-
-    private String checksum(String message){
-        int checksum = 0;
-        for (int i = 0; i < message.length(); i++){
-            checksum = checksum ^ message.charAt(i);
-        }
-        return Integer.toHexString(checksum);
     }
 
 
