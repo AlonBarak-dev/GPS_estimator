@@ -44,6 +44,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
+import java.text.DecimalFormat;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -82,6 +83,7 @@ public class MainActivity extends AppCompatActivity implements OnNmeaMessageList
     private LocationManager locationManager;
     private String nmea_message;
     private String last_rmc, last_gga;
+    private double longitude, latitude;
     private String original_rmc = "$GNRMC,081912.00,A,3206.168103,N,03512.583148,E,0.0,,150623,3.0,E,A,V*70";
     private String original_gga = "$GNGGA,081912.00,3206.168103,N,03512.583148,E,1,12,0.5,677.8,M,19.0,M,,*7D\n";
     private Handler mHandler; // Our main handler that will receive callback notifications
@@ -139,7 +141,7 @@ public class MainActivity extends AppCompatActivity implements OnNmeaMessageList
                 if(msg.what == MESSAGE_READ){
                     String readMessage = null;
                     readMessage = new String((byte[]) msg.obj, StandardCharsets.UTF_8);
-                    mReadBuffer.setText("$GNRMC,081912.00,A,3206.168103,N,03512.583148,E,0.0,,150623,3.0,E,A,V*70 \n$GNGGA,081912.00,3206.168103,N,03512.583148,E,1,12,0.5,677.8,M,19.0,M,,*7D\n");
+//                    mReadBuffer.setText(last_rmc+last_gga);
                 }
 
                 if(msg.what == CONNECTING_STATUS){
@@ -368,7 +370,7 @@ public class MainActivity extends AppCompatActivity implements OnNmeaMessageList
                         mConnectedThread = new ConnectedThread(mBTSocket, mHandler);
                         mConnectedThread.start();
                         // HERE!!
-                        timer.schedule(task, 0, 10);
+                        timer.schedule(task, 0, 1000);
 //                        Toast.makeText(MainActivity.this, "Started NMEA Streaming!", Toast.LENGTH_SHORT).show();
 
                         mHandler.obtainMessage(CONNECTING_STATUS, 1, -1, name)
@@ -395,35 +397,46 @@ public class MainActivity extends AppCompatActivity implements OnNmeaMessageList
 //            mConnectedThread.write(s);
 ////            SystemClock.sleep(900);
 //        }
-        if(s.contains("$GPGGA")){
+        Log.d("NMEA", s);
+        if(s.contains("$GPGGA") | s.contains("$GNGGA")){
+
             String[] fields = s.split(",");
             fields[7] = "12";
             fields[0] = "$GNGGA";
             String new_s = "";
+
+
             for (int i = 0; i < fields.length; i++){
                 new_s += fields[i];
                 if (i < fields.length - 1)
                     new_s += ",";
             }
+
             String check_sum = checksum(new_s.substring(1, new_s.indexOf("*")));
             String[] new_fields = new_s.split(",,");
             new_fields[1] = "*" + check_sum;
             new_s = "";
+
             for (int i = 0; i < new_fields.length; i++){
                 new_s += new_fields[i];
                 if (i < new_fields.length - 1)
                     new_s += ",,";
             }
+
             new_s += "\n";
+
             this.last_gga = new_s;
+            mReadBuffer.setText(last_rmc+last_gga);
             Log.d("NMEA", new_s);
         }
 
-        else if (s.contains("$GPRMC")) {
+        else if (s.contains("$GPRMC") | s.contains("$GNRMC")) {
             String[] fields = s.split(",");
             fields[0] = "$GNRMC";
             fields[fields.length -1] = "W*";
             String new_s = "";
+
+
             for (int i = 0; i < fields.length; i++){
                 new_s += fields[i];
                 if (i < fields.length - 1)
@@ -433,7 +446,10 @@ public class MainActivity extends AppCompatActivity implements OnNmeaMessageList
             String check_sum = checksum(new_s.substring(1, new_s.indexOf("*")));
             new_s += check_sum;
             new_s += " \n";
+
+
             this.last_rmc = new_s;
+            mReadBuffer.setText(last_rmc+last_gga);
             Log.d("NMEA", new_s);
         }
     }
@@ -450,7 +466,13 @@ public class MainActivity extends AppCompatActivity implements OnNmeaMessageList
 
     @Override
     public void onLocationChanged(Location location) {
-
+        Log.d("GPS: ", "" + location.getLatitude() + ", " + location.getLongitude());
+        // conversion
+        double l1 = (Math.floor(location.getLongitude()) * 100) + ((location.getLongitude() - Math.floor(location.getLongitude())) * 60);
+        double l2 = (Math.floor(location.getLatitude()) * 100) + ((location.getLatitude() - Math.floor(location.getLatitude())) * 60);
+        Log.d("GPS2NMEA: ", l2 + ", " + l1);
+        this.longitude = l1;
+        this.latitude = l2;
     }
 
     @Override
