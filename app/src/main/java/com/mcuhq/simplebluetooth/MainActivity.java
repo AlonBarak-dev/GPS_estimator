@@ -69,6 +69,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener{
     private Button mOffBtn;
     private Button mListPairedDevicesBtn;
     private Button mDiscoverBtn;
+    private Button mSaveLog;
     private ListView mDevicesListView;
     private CheckBox mLED1, mMotor1;
 
@@ -199,11 +200,20 @@ public class MainActivity extends AppCompatActivity implements LocationListener{
                     discover();
                 }
             });
+
+            mSaveLog.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    Log.d("LOG", "Log saved successfully!");
+                    logger.close();
+                }
+            });
         }
         // Setting up the Nmea updater
         task = new TimerTask() {
             @Override
             public void run() {
+//                nmea_manager.generate_nmea_packets();
                 mConnectedThread.write(nmea_manager.getLast_rmc()+nmea_manager.getLast_gga());
             }
         };
@@ -220,6 +230,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener{
         mListPairedDevicesBtn = (Button)findViewById(R.id.paired_btn);
         mLED1 = (CheckBox)findViewById(R.id.checkbox_led_1);
         mMotor1 = (CheckBox)findViewById(R.id.checkbox_motor);
+        mSaveLog = (Button) findViewById(R.id.save_log);
 
         mBTArrayAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1);
         mBTAdapter = BluetoothAdapter.getDefaultAdapter(); // get a handle on the bluetooth radio

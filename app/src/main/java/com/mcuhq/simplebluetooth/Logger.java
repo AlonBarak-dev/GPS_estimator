@@ -17,12 +17,9 @@ public class Logger {
             String filename = generateFileName();
             file = new File(filepath, filename);
             fos = new FileOutputStream(file);
-            fos.write("File Created - Login successfully!\n".getBytes());
         }
         catch(FileNotFoundException e){
             e.printStackTrace();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
         }
     }
 

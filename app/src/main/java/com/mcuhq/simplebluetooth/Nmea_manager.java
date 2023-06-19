@@ -6,6 +6,8 @@ import android.support.annotation.RequiresApi;
 import android.util.Log;
 import android.widget.TextView;
 
+import java.util.Objects;
+
 @RequiresApi(api = Build.VERSION_CODES.N)
 public class Nmea_manager implements OnNmeaMessageListener {
 
@@ -25,6 +27,7 @@ public class Nmea_manager implements OnNmeaMessageListener {
         logger = init_logger;
         SOG = "";
         COG = "";
+        this.nmea_packets = new String[5];
     }
 
     @Override
@@ -66,16 +69,18 @@ public class Nmea_manager implements OnNmeaMessageListener {
         else if (s.contains("$GPRMC") | s.contains("$GNRMC")) {
             String[] fields = s.split(",");
             fields[0] = "$GNRMC";
+//            if (!Objects.equals(fields[3], "")){
+//                latitude = Double.parseDouble(fields[3]);
+//                longitude = Double.parseDouble(fields[5]);
+//            }
 
-            latitude = Double.parseDouble(fields[3]);
-            longitude = Double.parseDouble(fields[5]);
 
             fields[fields.length -1] = "W*";
             // extract speed over ground
-            SOG = fields[8];
-            if (!SOG.equals( "0.0")){
-                COG = fields[9];
-            }
+//            SOG = fields[8];
+//            if (!SOG.equals( "0.0") && !SOG.equals("")){
+//                COG = fields[9];
+//            }
 
             Log.d("NMEA_SPEED", SOG + ", " + COG);
             String new_s = "";
@@ -98,7 +103,7 @@ public class Nmea_manager implements OnNmeaMessageListener {
         }
     }
 
-    private void generate_nmea_packets(){
+    public void generate_nmea_packets(){
         double delta_t = 0.0;
         for(int i = 0; i < this.nmea_packets.length;i++){
             // increase delta T
@@ -110,6 +115,30 @@ public class Nmea_manager implements OnNmeaMessageListener {
 
             double[] estimated_coords = this.estimate_coords(distance, direction);
             estimated_coords = this.convert_2_nmea(estimated_coords);
+            // RMC
+            String[] rmc_fields = last_rmc.split(",");
+            rmc_fields[3] = String.valueOf(estimated_coords[0]);
+            rmc_fields[5] = String.valueOf(estimated_coords[1]);
+            String generated_rmc_i = "";
+            for (int j = 0; j < rmc_fields.length - 1; j++){
+                generated_rmc_i += rmc_fields[i];
+                generated_rmc_i += ",";
+            }
+            generated_rmc_i += "W*";
+            generated_rmc_i += checksum(generated_rmc_i.substring(1, generated_rmc_i.indexOf('*')));
+
+            //GGA
+            String[] gga_fields = last_gga.split(",");
+            gga_fields[2] = String.valueOf(estimated_coords[0]);
+            gga_fields[4] = String.valueOf(estimated_coords[1]);
+            String generated_gga_i = "";
+            for (int j = 0; j < gga_fields.length; j++){
+                generated_gga_i += gga_fields[j];
+                generated_gga_i += ',';
+            }
+            generated_gga_i += "*" + checksum(generated_gga_i.substring(1, generated_gga_i.indexOf('*')));
+            nmea_packets[i] = generated_rmc_i + " \n" + generated_gga_i + "\n";
+            Log.d("GEN_NMEA", nmea_packets[i]);
 
 
         }
@@ -117,6 +146,7 @@ public class Nmea_manager implements OnNmeaMessageListener {
     }
 
     private double[] estimate_coords(double distance, double direction){
+        // return lat long
         return new double[] {0, 0};
     }
 
