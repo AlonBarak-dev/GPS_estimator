@@ -71,7 +71,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener{
     private Button mDiscoverBtn;
     private Button mSaveLog;
     private ListView mDevicesListView;
-    private CheckBox mLED1, mMotor1;
+//    private CheckBox mLED1, mMotor1;
 
     private BluetoothAdapter mBTAdapter;
     private Set<BluetoothDevice> mPairedDevices;
@@ -151,28 +151,6 @@ public class MainActivity extends AppCompatActivity implements LocationListener{
             Toast.makeText(getApplicationContext(),"no bluetooth connection",Toast.LENGTH_SHORT).show();
         }
         else {
-            mLED1.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-                @Override
-                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                    if (mConnectedThread != null) {
-                        if (isChecked) {
-                            mConnectedThread.write("1"); //LED
-                        }else {
-                            mConnectedThread.write("3"); //LED
-                            }
-                        }
-                    }
-            });
-
-
-            mMotor1.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-                @Override
-                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                    if (mConnectedThread != null) {}
-                }
-            });
-
-
             mScanBtn.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -228,8 +206,6 @@ public class MainActivity extends AppCompatActivity implements LocationListener{
         mOffBtn = (Button)findViewById(R.id.off);
         mDiscoverBtn = (Button)findViewById(R.id.discover);
         mListPairedDevicesBtn = (Button)findViewById(R.id.paired_btn);
-        mLED1 = (CheckBox)findViewById(R.id.checkbox_led_1);
-        mMotor1 = (CheckBox)findViewById(R.id.checkbox_motor);
         mSaveLog = (Button) findViewById(R.id.save_log);
 
         mBTArrayAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1);
