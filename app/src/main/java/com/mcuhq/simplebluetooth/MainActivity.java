@@ -65,6 +65,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener{
     // GUI Components
     private TextView mBluetoothStatus;
     private TextView mReadBuffer;
+    private TextView mGps_coords;
     private Button mScanBtn;
     private Button mOffBtn;
     private Button mListPairedDevicesBtn;
@@ -207,6 +208,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener{
         mDiscoverBtn = (Button)findViewById(R.id.discover);
         mListPairedDevicesBtn = (Button)findViewById(R.id.paired_btn);
         mSaveLog = (Button) findViewById(R.id.save_log);
+        mGps_coords = (TextView) findViewById(R.id.gps_coords);
 
         mBTArrayAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1);
         mBTAdapter = BluetoothAdapter.getDefaultAdapter(); // get a handle on the bluetooth radio
@@ -369,6 +371,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener{
 
     @Override
     public void onLocationChanged(Location location) {
+        this.mGps_coords.setText("GPS: " + location.getLatitude() + ", " + location.getLongitude());
         Log.d("GPS: ", "" + location.getLatitude() + ", " + location.getLongitude());
         // conversion
         double l1 = (Math.floor(location.getLongitude()) * 100) + ((location.getLongitude() - Math.floor(location.getLongitude())) * 60);
